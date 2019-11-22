@@ -79,18 +79,24 @@ chicago_area <- c("IL", "IN", "WI", "MI")
 chicago_region <- states %>% 
   filter(state_abbv %in% chicago_area)
 
-summary_by_county %>% 
-  filter(state_abbv %in% chicago_area) %>% 
-  ggplot(aes(long, lat, group = group, fill = records)) +
-  geom_polygon(color = NA) +
+summary_by_county <- summary_by_county %>% 
+  filter(state_abbv %in% chicago_area)
+
+ggplot() +
   geom_polygon(data = chicago_region, mapping = aes(long, lat, group = group),
-               fill = NA, color = "#ffffff") +
+               fill = "grey", color = "#ffffff") +
+  geom_polygon(data = summary_by_county, 
+               mapping = aes(long, lat, group = group, fill = records), 
+               color = "#ffffff", size = 0.25) +
+  scale_fill_gradient(low = "#deebf7", high = "#3182bd") +
   coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
   theme(legend.title = element_text(),
-        legend.key.width = unit(.5, "in")) +
+        legend.key.width = unit(.5, "in"),
+        panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "grey", linetype = "dotted")) +
   labs(fill = "Gang affiliation records") 
 
-# ========================================================================================
+# ====================================================================================
 
 # Map records by ZCTA in Cook County
 # Import ZIP-to-ZCTA crosswalk
@@ -127,11 +133,11 @@ ggplot() +
           color = "#ffffff", size = 0.25) +
   scale_fill_brewer(type = "seq", palette = "Blues", direction = 1) +
   coord_sf(datum = NA) +
-  labs(title = "More gang affiliation records associated with the South Side",
+  labs(title = "More records created on communities in the South Side",
        fill = "Gang affiliation records created") +
   theme(panel.background = element_rect(fill = "white"))
 
-# =======================================================================================
+# ==================================================================================
 
 # Summarize data by year and month
 summary_by_month <- gang_database %>% 
@@ -142,14 +148,6 @@ summary_by_month <- gang_database %>%
 
 summary_by_month$month <- factor(summary_by_month$month, levels = month.abb)
 summary_by_month$year <- factor(summary_by_month$year, levels = c(2014, 2015, 2016, 2017))
-
-ggplot(summary_by_month, aes(x = year, y = records)) +
-  geom_bar(stat = "identity", fill = "#3182bd") +
-  labs(title = "Total record creation increased from 2014 to 2017",
-       x = "Year",
-       y = "Number of records created") +
-  theme(panel.background = element_rect(fill = "white"),
-        panel.grid.major.y = element_line(color = "grey", linetype = "dotted"))
 
 ggplot(summary_by_month, aes(x = month, y = records, group = year, color = year)) +
   geom_line() +
@@ -163,14 +161,6 @@ ggplot(summary_by_month, aes(x = month, y = records, group = year, color = year)
 # See only for IL
 IL_records <- summary_by_month %>% 
   filter(state == "IL") 
-
-ggplot(IL_records, aes(x = year, y = records)) +
-  geom_bar(stat = "identity", fill = "#9ecae1") +
-  labs(title = "Total record creation increased from 2014 to 2017",
-       x = "Year",
-       y = "Number of records created") +
-  theme(panel.background = element_rect(fill = "white"),
-        panel.grid.major.y = element_line(color = "grey", linetype = "dotted"))
 
 ggplot(IL_records, aes(x = month, y = records, group = year, color = year)) +
   geom_line() +
@@ -203,16 +193,16 @@ ggplot(compare_IL_tot, aes(x = year, y = records, fill = level)) +
   theme(panel.background = element_rect(fill = "white"),
         panel.grid.major.y = element_line(color = "grey", linetype = "dotted"))
 
-# =======================================================================================
+# ===================================================================================
 # Make a tile map of where the records are from
 summary_by_state <- gang_database %>% 
   group_by(state, year) %>% 
   drop_na() %>% 
   summarise(records = n())
 
-install.packages("statebins", repos = "https://cinc.rud.is")
+# install.packages("statebins", repos = "https://cinc.rud.is")
 library(statebins)
-packageVersion("statebins")
+# packageVersion("statebins")
 
 # Test on 2017 data
 summary_by_state17 <- summary_by_state %>% 
@@ -224,6 +214,7 @@ full_state_list <- as_tibble(state.abb) %>%
 merged <- left_join(full_state_list, summary_by_state17) 
 merged[is.na(merged)] <- 0
 
+# Test case - 2017
 merged <- merged %>% 
   mutate(year = 2017) %>% 
   mutate(in_database = records > 0)
@@ -270,3 +261,36 @@ plot_tilemap_by_year(2018)
 for (year in 2013:2018) {
   plot_tilemap_by_year(year)
 }
+
+# ===================================================================================
+# Summarize by gang name
+summary_by_gang <- gang_database %>% 
+  group_by(gang_id) %>% 
+  summarise(number = n()) %>% 
+  drop_na()
+
+sort(summary_by_gang$number, decreasing = TRUE)
+
+# Summarize by race - no surprises here... 
+# Need to download ACS data on share of population by race to make comparisons
+basic_race_category <- c("Black", "Hispanic", "White", "Asian", 
+                         "Native American (American Indian)", "Multiracial")
+
+by_race <- gang_database %>% 
+  group_by(race) %>% 
+  summarise(number = n()) %>% 
+  subset(race %in% basic_race_category) %>% 
+  drop_na()
+
+sort(by_race$number, decreasing = TRUE)
+
+ggplot(data = by_race, mapping = aes(x = race, y = number), fill = "#9ecae1") +
+  geom_bar(stat = "identity") +
+  labs(title = "Black, Latinx people disproportionately represented in Cook County gang database",
+       x = "Race",
+       y = "Number of records created") +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major.y = element_line(color = "grey", linetype = "dotted"))
+
+
+  
