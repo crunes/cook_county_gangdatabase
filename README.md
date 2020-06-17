@@ -1,2 +1,2 @@
-# Coon County Gang Affiliation Record Database
+# Cook County Gang Affiliation Record Database
 This project explores data from the Cook County Gang Affiliation Record Database, visualized in R. Inspired by the South Side Weekly's coverage of organizers' efforts to eliminate the Chicago Police Department's gang database (https://southsideweekly.com/gang-databases-persist-illinois-despite-efforts-eliminate/), this analysis looks into the Cook County Gang Affiliation Record Database. 
